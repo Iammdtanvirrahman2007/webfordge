@@ -1,4 +1,5 @@
 import './v27Bootstrap.js';
+import './v28Bootstrap.js';
 const MODES=['lock-layout','auto-adjust','make-individually'];
 const DEVICES=['desktop','tablet','mobile'];
 const STYLE_KEYS=['width','minHeight','position','left','top','padding','margin','flexDirection','gap','gridTemplateColumns','background','color','borderRadius','display'];
