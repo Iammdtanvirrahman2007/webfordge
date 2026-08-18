@@ -1,102 +1,40 @@
 import {
-  addEntity,
-  createProject,
-  getChildren,
-  getEntity,
-  removeEntity,
-  updateEntity,
+  addEntity, createProject, getChildren, getEntity, removeEntity, updateEntity,
 } from '../core/projectGraph.js';
+import { buildFileTree, createProjectFiles, findProjectFile, upsertProjectFile } from '../core/projectFiles.js';
 
 let graph = createProject({ name: 'Untitled Project' });
-graph = addEntity(graph, { type: 'page', name: 'Home', parentId: graph.projectId, data: { route: '/' } });
-const pageId = Object.values(graph.entities).find((entity) => entity.type === 'page')?.id;
+let selectedPageId = null;
+let selectedId = null;
+let projectFiles = createProjectFiles();
+let activeFilePath = 'frontend/pages/Home.html';
+
 const canvas = document.querySelector('#canvas');
 const tree = document.querySelector('#layerTree');
 const inspector = document.querySelector('#inspector');
 const selectionInfo = document.querySelector('#selectionInfo');
-let selectedId = null;
+const labels = { section:'Section', heading:'Heading', text:'Text', button:'Button', image:'Image' };
+const defaultStyles = { width:'auto', minHeight:'auto', background:'', color:'', padding:'18px', margin:'18px', borderRadius:'0px' };
 
-const labels = { section: 'Section', heading: 'Heading', text: 'Text', button: 'Button', image: 'Image' };
-const defaultStyles = { width: 'auto', minHeight: 'auto', background: '', color: '', padding: '18px', margin: '18px', borderRadius: '0px' };
-
-function escapeHtml(value) { return String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); }
-function makeContent(type) {
-  if(type==='heading') return '<h1>New Heading</h1>';
-  if(type==='text') return '<p>Start writing here...</p>';
-  if(type==='button') return '<button>Click me</button>';
-  if(type==='image') return '<div class="image-placeholder">Image placeholder</div>';
-  return '<div><h2>New Section</h2><p>Section content</p></div>';
-}
-function targetParent() {
-  const selected = selectedId ? getEntity(graph, selectedId) : null;
-  return selected?.type === 'element' && selected.data?.type === 'section' ? selected.id : pageId;
-}
-function add(type) {
-  const node = { type:'element', name:labels[type], parentId:targetParent(), data:{type,content:makeContent(type),styles:{...defaultStyles}} };
-  graph = addEntity(graph,node);
-  render();
-  select(node.id);
-}
-function renderNode(node) {
-  const style = {...defaultStyles,...(node.data?.styles??{})};
-  const wrapper = document.createElement('div');
-  wrapper.className = 'forge-node';
-  wrapper.dataset.id = node.id;
-  wrapper.style.width = style.width || 'auto';
-  wrapper.style.minHeight = style.minHeight || 'auto';
-  wrapper.style.background = style.background || '';
-  wrapper.style.color = style.color || '';
-  wrapper.style.padding = style.padding || '';
-  wrapper.style.margin = style.margin || '';
-  wrapper.style.borderRadius = style.borderRadius || '';
-  wrapper.innerHTML = node.data?.content ?? '';
-  wrapper.addEventListener('click',e=>{e.stopPropagation();select(node.id)});
-  getChildren(graph,node.id).forEach(child=>wrapper.appendChild(renderNode(child)));
-  return wrapper;
-}
-function renderTreeNode(node,depth=0) {
-  const wrap=document.createElement('div');
-  const item=document.createElement('div');
-  item.className=`tree-item ${node.id===selectedId?'selected':''}`;
-  item.style.paddingLeft=`${8+depth*14}px`;
-  item.textContent=`${getChildren(graph,node.id).length?'▾':'•'} ${node.name}`;
-  item.onclick=()=>select(node.id);
-  wrap.appendChild(item);
-  getChildren(graph,node.id).forEach(child=>wrap.appendChild(renderTreeNode(child,depth+1)));
-  return wrap;
-}
-function render() {
-  canvas.innerHTML='';
-  const children=getChildren(graph,pageId);
-  if(!children.length) canvas.innerHTML='<div class="drop-hint">Drag an element here to start building</div>';
-  else children.forEach(node=>canvas.appendChild(renderNode(node)));
-  tree.innerHTML='';
-  if(!children.length) tree.innerHTML='<div class="empty">No layers yet</div>';
-  else children.forEach(node=>tree.appendChild(renderTreeNode(node)));
-}
-function field(label,id,value,type='text'){return `<div class="field"><label>${label}</label><input id="${id}" type="${type}" value="${escapeHtml(value??'')}"></div>`;}
-function select(id) {
-  selectedId=id;
-  const node=getEntity(graph,id);
-  if(!node)return;
-  render();
-  document.querySelectorAll('.forge-node').forEach(el=>el.classList.toggle('selected',el.dataset.id===id));
-  selectionInfo.textContent=node.name;
-  const styles={...defaultStyles,...(node.data?.styles??{})};
-  inspector.innerHTML=`${field('Name','name',node.name)}<div class="field"><label>Type</label><input value="${escapeHtml(node.data?.type??node.type)}" disabled></div>${field('Width','width',styles.width)}${field('Min height','minHeight',styles.minHeight)}${field('Padding','padding',styles.padding)}${field('Margin','margin',styles.margin)}${field('Background','background',styles.background)}${field('Text color','color',styles.color)}${field('Radius','radius',styles.borderRadius)}${field('Content','content',node.data?.content??'')}<button id="delete" class="danger">Delete element</button>`;
-  const patch=()=>{
-    const nextStyles={...styles,width:inspector.querySelector('#width').value,minHeight:inspector.querySelector('#minHeight').value,padding:inspector.querySelector('#padding').value,margin:inspector.querySelector('#margin').value,background:inspector.querySelector('#background').value,color:inspector.querySelector('#color').value,borderRadius:inspector.querySelector('#radius').value};
-    graph=updateEntity(graph,id,{name:inspector.querySelector('#name').value,data:{...node.data,styles:nextStyles,content:inspector.querySelector('#content').value}});
-    render();
-    document.querySelectorAll('.forge-node').forEach(el=>el.classList.toggle('selected',el.dataset.id===id));
-  };
-  ['name','width','minHeight','padding','margin','background','color','radius','content'].forEach(key=>inspector.querySelector(`#${key}`).addEventListener('change',patch));
-  inspector.querySelector('#delete').onclick=()=>{graph=removeEntity(graph,id);selectedId=null;render();selectionInfo.textContent='Nothing selected';inspector.innerHTML='<p>Select an element to edit its properties.</p>';};
-}
-document.querySelectorAll('.element').forEach(button=>{button.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain',button.dataset.type));button.addEventListener('click',()=>add(button.dataset.type));});
-canvas.addEventListener('dragover',e=>e.preventDefault());
-canvas.addEventListener('drop',e=>{e.preventDefault();const type=e.dataTransfer.getData('text/plain');if(type)add(type);});
-canvas.addEventListener('click',()=>{selectedId=null;selectionInfo.textContent='Nothing selected';inspector.innerHTML='<p>Select an element to edit its properties.</p>';render();});
-document.querySelector('#previewBtn').onclick=()=>window.open(location.href,'_blank');
+function escapeHtml(value){return String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
+function makeContent(type){if(type==='heading')return '<h1>New Heading</h1>';if(type==='text')return '<p>Start writing here...</p>';if(type==='button')return '<button>Click me</button>';if(type==='image')return '<div class="image-placeholder">Image placeholder</div>';return '<div><h2>New Section</h2><p>Section content</p></div>';}
+function ensurePage(){if(selectedPageId&&getEntity(graph,selectedPageId))return selectedPageId;const pages=getChildren(graph,graph.projectId).filter(e=>e.type==='page');if(pages.length){selectedPageId=pages[0].id;return selectedPageId;}graph=addEntity(graph,{type:'page',name:'Home',parentId:graph.projectId,data:{route:'/'}});selectedPageId=getChildren(graph,graph.projectId).find(e=>e.type==='page').id;return selectedPageId;}
+ensurePage();
+function targetParent(){const selected=selectedId?getEntity(graph,selectedId):null;return selected?.data?.type==='section'?selected.id:selectedPageId;}
+function add(type){graph=addEntity(graph,{type:'element',name:labels[type],parentId:targetParent(),data:{type,content:makeContent(type),styles:{...defaultStyles}}});render();select(getChildren(graph,targetParent()).at(-1).id);}
+function renderNode(node){const s={...defaultStyles,...(node.data?.styles??{})};const w=document.createElement('div');w.className='forge-node';w.dataset.id=node.id;Object.assign(w.style,{width:s.width,minHeight:s.minHeight,background:s.background,color:s.color,padding:s.padding,margin:s.margin,borderRadius:s.borderRadius});w.innerHTML=node.data?.content??'';w.onclick=e=>{e.stopPropagation();select(node.id)};getChildren(graph,node.id).forEach(c=>w.appendChild(renderNode(c)));return w;}
+function renderTreeNode(node,depth=0){const wrap=document.createElement('div');const item=document.createElement('div');item.className=`tree-item ${node.id===selectedId?'selected':''}`;item.style.paddingLeft=`${8+depth*14}px`;item.textContent=`${getChildren(graph,node.id).length?'▾':'•'} ${node.name}`;item.onclick=()=>select(node.id);wrap.appendChild(item);getChildren(graph,node.id).forEach(c=>wrap.appendChild(renderTreeNode(c,depth+1)));return wrap;}
+function renderPages(){const pageRoot=document.querySelector('#pages');if(!pageRoot)return;const pages=getChildren(graph,graph.projectId).filter(e=>e.type==='page');pageRoot.innerHTML=pages.map(p=>`<button class="page-item ${p.id===selectedPageId?'selected':''}" data-page="${p.id}">▣ ${escapeHtml(p.name)}</button>`).join('')||'<div class="empty">No pages</div>';pageRoot.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{selectedPageId=b.dataset.page;selectedId=null;render();clearInspector();});}
+function renderFiles(){const root=document.querySelector('#fileTree');if(!root)return;const node=buildFileTree(projectFiles);root.innerHTML='';const walk=(n,depth=0)=>{const el=document.createElement('div');el.className=`file-item ${n.path===activeFilePath?'selected':''}`;el.style.paddingLeft=`${8+depth*13}px`;el.textContent=`${n.type==='folder'?'▾':'•'} ${n.name}`;if(n.type==='file')el.onclick=()=>openFile(n.path);root.appendChild(el);n.children.forEach(c=>walk(c,depth+1));};walk(node);}
+function codeForPage(){const page=getEntity(graph,selectedPageId);return `<!-- WebForge generated page: ${page?.name??'Home'} -->\n${getChildren(graph,selectedPageId).map(n=>n.data?.content??'').join('\n')}`;}
+function openFile(path){activeFilePath=path;const file=findProjectFile(projectFiles,path);const editor=document.querySelector('#codeEditor');if(editor)editor.value=file?.content||codeForPage();renderFiles();}
+function render(){ensurePage();canvas.innerHTML='';const children=getChildren(graph,selectedPageId);if(!children.length)canvas.innerHTML='<div class="drop-hint">Drag an element here to start building</div>';else children.forEach(n=>canvas.appendChild(renderNode(n)));tree.innerHTML='';if(children.length)children.forEach(n=>tree.appendChild(renderTreeNode(n)));else tree.innerHTML='<div class="empty">No layers yet</div>';renderPages();renderFiles();selectionInfo.textContent=selectedId?getEntity(graph,selectedId)?.name:'Nothing selected';}
+function field(label,id,value){return `<div class="field"><label>${label}</label><input id="${id}" value="${escapeHtml(value??'')}"></div>`;}
+function clearInspector(){inspector.innerHTML='<p>Select an element to edit its properties.</p>';}
+function select(id){selectedId=id;const node=getEntity(graph,id);if(!node){clearInspector();return;}render();const s={...defaultStyles,...(node.data?.styles??{})};inspector.innerHTML=`${field('Name','name',node.name)}${field('Width','width',s.width)}${field('Min height','minHeight',s.minHeight)}${field('Padding','padding',s.padding)}${field('Margin','margin',s.margin)}${field('Background','background',s.background)}${field('Text color','color',s.color)}${field('Radius','radius',s.borderRadius)}${field('Content','content',node.data?.content??'')}<button id="delete" class="danger">Delete element</button>`;const patch=()=>{const styles={...s,width:inspector.querySelector('#width').value,minHeight:inspector.querySelector('#minHeight').value,padding:inspector.querySelector('#padding').value,margin:inspector.querySelector('#margin').value,background:inspector.querySelector('#background').value,color:inspector.querySelector('#color').value,borderRadius:inspector.querySelector('#radius').value};graph=updateEntity(graph,id,{name:inspector.querySelector('#name').value,data:{...node.data,styles,content:inspector.querySelector('#content').value}});render();select(id);};['name','width','minHeight','padding','margin','background','color','radius','content'].forEach(k=>inspector.querySelector(`#${k}`).addEventListener('change',patch));inspector.querySelector('#delete').onclick=()=>{graph=removeEntity(graph,id);selectedId=null;render();clearInspector();};}
+document.querySelectorAll('.element').forEach(b=>{b.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain',b.dataset.type));b.onclick=()=>add(b.dataset.type);});canvas.ondragover=e=>e.preventDefault();canvas.ondrop=e=>{e.preventDefault();const t=e.dataTransfer.getData('text/plain');if(t)add(t)};canvas.onclick=()=>{selectedId=null;render();clearInspector();};
+const codePanel=document.querySelector('#codeEditor');if(codePanel){codePanel.value=codeForPage();codePanel.addEventListener('change',()=>{const current=findProjectFile(projectFiles,activeFilePath);projectFiles=upsertProjectFile(projectFiles,{...(current||{path:activeFilePath,kind:'source',language:'html'}),content:codePanel.value});});}
+document.querySelector('#addPage')?.addEventListener('click',()=>{const count=getChildren(graph,graph.projectId).filter(e=>e.type==='page').length+1;graph=addEntity(graph,{type:'page',name:`Page ${count}`,parentId:graph.projectId,data:{route:`/page-${count}`}});selectedPageId=getChildren(graph,graph.projectId).at(-1).id;selectedId=null;render();clearInspector();});
+document.querySelector('#saveFile')?.addEventListener('click',()=>{projectFiles=upsertProjectFile(projectFiles,{path:activeFilePath,kind:'source',language:'html',content:codePanel?.value??''});renderFiles();});
 document.querySelector('#exportBtn').onclick=()=>{const body=canvas.innerHTML.replaceAll(' class="forge-node selected"',' class="forge-node"');const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WebForge Export</title></head><body>${body}</body></html>`;const blob=new Blob([html],{type:'text/html'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='webforge-page.html';a.click();URL.revokeObjectURL(a.href);};
 render();
