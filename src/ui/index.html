@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebForge</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">W</span><span>WebForge</span></div>
+    <div class="project-name">Untitled Project</div>
+    <div class="actions"><button id="previewBtn">Preview</button><button class="primary" id="exportBtn">Export</button></div>
+  </header>
+  <main class="workspace">
+    <aside class="panel left-panel">
+      <div class="panel-title">Elements</div>
+      <div id="elements" class="elements">
+        <button class="element" draggable="true" data-type="section">▣ Section</button>
+        <button class="element" draggable="true" data-type="heading">T Heading</button>
+        <button class="element" draggable="true" data-type="text">¶ Text</button>
+        <button class="element" draggable="true" data-type="button">▭ Button</button>
+        <button class="element" draggable="true" data-type="image">▧ Image</button>
+      </div>
+      <div class="panel-title tree-title">Layers</div>
+      <div id="layerTree" class="tree"></div>
+    </aside>
+    <section class="canvas-wrap">
+      <div class="canvas-toolbar"><span>Desktop</span><span id="selectionInfo">Nothing selected</span></div>
+      <div id="canvas" class="canvas"><div class="drop-hint">Drag an element here to start building</div></div>
+    </section>
+    <aside class="panel right-panel">
+      <div class="panel-title">Inspector</div>
+      <div id="inspector" class="inspector"><p>Select an element to edit its properties.</p></div>
+    </aside>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
