@@ -1,2 +1,2 @@
-export const WEBFORGE_VERSION = 23;
+export const WEBFORGE_VERSION = 24;
 export const WEBFORGE_VERSION_LABEL = `v${WEBFORGE_VERSION}`;
