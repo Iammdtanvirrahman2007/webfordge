@@ -2,7 +2,7 @@
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>WebForge</title><link rel="stylesheet" href="./src/ui/styles.css"></head>
 <body>
-<header class="topbar"><div class="brand"><span class="logo">W</span><span>WebForge</span></div><div class="history"><button id="undoBtn">↶</button><button id="redoBtn">↷</button></div><div class="project-name">Untitled Project</div><div class="actions"><button id="previewBtn">Preview</button><button class="primary" id="exportBtn">Export</button></div></header>
+<header class="topbar"><div class="brand"><span class="logo">W</span><span>WebForge</span></div><div class="history"><button id="undoBtn">↶</button><button id="redoBtn">↷</button></div><div class="project-name">Untitled Project</div><div class="actions"><button id="previewBtn">Preview</button><button id="generateBtn" class="primary">Generate Code</button><button id="exportBtn">Export</button></div></header>
 <div class="app-tabs"><button class="tab active">Visual</button><button class="tab">Structure</button><button class="tab">Code</button></div>
 <main class="workspace">
 <aside class="panel left-panel">
@@ -12,4 +12,15 @@
 </aside>
 <section class="canvas-wrap"><div class="canvas-toolbar"><div class="device-switch"><button data-device="desktop" class="active">Desktop</button><button data-device="tablet">Tablet</button><button data-device="mobile">Mobile</button></div><span id="selectionInfo">Nothing selected</span><span id="viewportInfo">1200px</span></div><div id="canvas" class="canvas"><div class="drop-hint">Drag an element here to start building</div></div></section>
 <aside class="panel right-panel"><div class="panel-title">Code</div><div class="code-head"><span id="activeFile">frontend/pages/Home.html</span><button id="saveFile">Save</button></div><textarea id="codeEditor" spellcheck="false" class="code-editor"></textarea><div class="panel-title inspector-title">Inspector</div><div id="inspector" class="inspector"><p>Select an element to edit its properties.</p></div></aside>
-</main><script type="module" src="./src/ui/app.js"></script></body></html>
+</main>
+<script type="module" src="./src/ui/app.js"></script>
+<script type="module">
+import { generateProjectDownload } from './src/ui/projectGenerator.js';
+document.querySelector('#generateBtn')?.addEventListener('click', generateProjectDownload);
+window.addEventListener('webforge:generated', event => {
+  const files=Object.keys(event.detail.files||{}).length;
+  const button=document.querySelector('#generateBtn');
+  if(button){button.textContent=`Generated ${files} files ✓`;setTimeout(()=>button.textContent='Generate Code',1800);}
+});
+</script>
+</body></html>
