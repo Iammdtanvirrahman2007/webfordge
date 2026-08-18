@@ -29,7 +29,11 @@ export function mountComponentLibrary(target, onInsert) {
     const button = document.createElement('button');
     button.className = 'component-library-item';
     button.innerHTML = `<strong>◇ ${component.name}</strong><span>${component.props?.length || 0} props</span>`;
-    button.addEventListener('click', () => onInsert?.(createComponentInstance(component.id)));
+    button.addEventListener('click', () => {
+      const instance = createComponentInstance(component.id);
+      markInstanceUsed(component.id);
+      onInsert?.(instance, component);
+    });
     list.appendChild(button);
   });
   target.appendChild(list);
