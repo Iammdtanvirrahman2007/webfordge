@@ -1,4 +1,5 @@
 import { createPageBranch, getBranchChildren } from '../core/pageBranches.js';
+import { openV28PageMap } from './v28PageMap.js';
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const safeSlug = value => String(value || 'page').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'page';
@@ -16,11 +17,11 @@ function installBranchPageCreation() {
     const parent = graph.entities?.[parentId];
     const name = prompt(`Create a branch page under ${parent?.name || 'current page'}`, 'New Page');
     if (!name) return;
-    const route = safeSlug(name);
     try {
-      const next = createPageBranch(graph, parentId, { name, route });
+      const next = createPageBranch(graph, parentId, { name, route: safeSlug(name) });
+      const childId = next.entities[parentId].children.at(-1);
       window.webforge.replaceGraph(next);
-      window.webforge.selectPage?.(next.entities[next.entities[parentId].children.at(-1)]?.id || next.entities[parentId].children.at(-1));
+      if (childId) window.webforge.selectPage?.(childId);
     } catch (error) {
       alert(error.message || 'Could not create branch page.');
     }
@@ -44,38 +45,37 @@ function refreshPageTargetGroups() {
     const group = document.createElement('optgroup');
     group.label = `🌿 ${graph.entities[currentId]?.name || 'Current Page'} branches`;
     branches.forEach(page => {
-      const option = document.createElement('option');
-      option.value = page.id;
-      option.textContent = page.name;
-      group.appendChild(option);
+      const option = document.createElement('option'); option.value = page.id; option.textContent = page.name; group.appendChild(option);
     });
     target.appendChild(group);
   }
   if (rest.length) {
-    const group = document.createElement('optgroup');
-    group.label = 'All project pages';
-    rest.forEach(page => {
-      const option = document.createElement('option');
-      option.value = page.id;
-      option.textContent = page.name;
-      group.appendChild(option);
-    });
+    const group = document.createElement('optgroup'); group.label = 'All project pages';
+    rest.forEach(page => { const option = document.createElement('option'); option.value = page.id; option.textContent = page.name; group.appendChild(option); });
     target.appendChild(group);
   }
   if ([...target.options].some(option => option.value === currentValue)) target.value = currentValue;
 }
 
-function install() {
-  installBranchPageCreation();
-  refreshPageTargetGroups();
-  const observer = new MutationObserver(refreshPageTargetGroups);
-  observer.observe(document.querySelector('#inspector') || document.body, { childList: true, subtree: true });
-  window.addEventListener('webforge:graphchange', refreshPageTargetGroups);
-  window.addEventListener('webforge:navigationchange', refreshPageTargetGroups);
+function installPageMapOverride() {
+  const button = document.querySelector('#pageMapBtn');
+  if (!button || button.dataset.v28MapInstalled) return;
+  const replacement = button.cloneNode(true);
+  replacement.dataset.v28MapInstalled = '1';
+  button.replaceWith(replacement);
+  replacement.onclick = openV28PageMap;
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', async () => { await sleep(100); install(); });
-} else {
-  setTimeout(install, 100);
+function install() {
+  installBranchPageCreation();
+  installPageMapOverride();
+  refreshPageTargetGroups();
+  const inspectorObserver = new MutationObserver(refreshPageTargetGroups);
+  inspectorObserver.observe(document.querySelector('#inspector') || document.body, { childList: true, subtree: true });
+  window.addEventListener('webforge:graphchange', () => { refreshPageTargetGroups(); installPageMapOverride(); });
+  window.addEventListener('webforge:navigationchange', refreshPageTargetGroups);
+  setTimeout(installPageMapOverride, 200);
 }
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', async () => { await sleep(100); install(); });
+else setTimeout(install, 100);
