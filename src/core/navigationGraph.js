@@ -1,0 +1,7 @@
+export const ACTIONS=['none','open-page','open-url','scroll-to-section','open-modal','run-javascript'];
+export function createNavigationGraph(){return{version:1,edges:{}}}
+export function setAction(graph,elementId,action,target=''){const next=structuredClone(graph);if(action==='none')delete next.edges[elementId];else next.edges[elementId]={elementId,action,target};return next}
+export function getAction(graph,elementId){return graph?.edges?.[elementId]||null}
+export function listEdges(graph){return Object.values(graph?.edges||{})}
+export function buildPageMap(projectGraph,navigationGraph){const pages=Object.values(projectGraph?.entities||{}).filter(e=>e.type==='page');const byId=Object.fromEntries(pages.map(p=>[p.id,p]));const edges=listEdges(navigationGraph).map(edge=>{const source=projectGraph.entities[edge.elementId];if(!source)return null;const sourcePage=source?.parentId&&projectGraph.entities[source.parentId]?.type==='page'?projectGraph.entities[source.parentId]:findAncestorPage(projectGraph,source.id);let targetPage=null;if(edge.action==='open-page')targetPage=pages.find(p=>p.id===edge.target)||null;return{...edge,sourcePageId:sourcePage?.id||null,sourcePageName:sourcePage?.name||'Unknown',targetPageId:targetPage?.id||null,targetPageName:targetPage?.name||edge.target||''}}).filter(Boolean);return{pages,edges,byId}}
+function findAncestorPage(graph,id){let current=graph.entities[id];while(current?.parentId){current=graph.entities[current.parentId];if(current?.type==='page')return current}return null}
