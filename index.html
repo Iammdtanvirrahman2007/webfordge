@@ -1,13 +1,14 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>WebForge</title><link rel="stylesheet" href="./src/ui/styles.css"><link rel="stylesheet" href="./src/ui/architecture.css"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>WebForge</title><link rel="stylesheet" href="./src/ui/styles.css"><link rel="stylesheet" href="./src/ui/architecture.css"><style>.component-library{padding:10px;border-top:1px solid #242938}.component-library-title{padding:4px 4px 8px;color:#aeb7c9;text-transform:uppercase;font-size:10px;font-weight:800;letter-spacing:.08em}.component-library-list{display:grid;gap:6px}.component-library-item{display:flex;flex-direction:column;gap:3px;text-align:left;padding:8px;border:1px solid #293044;border-radius:7px;background:#181d29;color:#e4e9f4;cursor:pointer}.component-library-item:hover{border-color:#7c5cff}.component-library-item span{font-size:10px;color:#818ba1}.component-library-empty{font-size:10px;line-height:1.45;color:#717b90;padding:6px}</style></head>
 <body>
-<header class="topbar"><div class="brand"><span class="logo">W</span><span>WebForge</span><span class="version-badge" id="versionBadge">v12</span></div><div class="history"><button id="undoBtn">↶</button><button id="redoBtn">↷</button></div><div class="project-name">Untitled Project</div><div class="actions"><button id="architectureBtn">Architecture</button><button id="componentsBtn">Components</button><button id="previewBtn">Preview</button><button id="generateBtn" class="primary">Generate Code</button><button id="exportBtn">Export</button></div></header>
+<header class="topbar"><div class="brand"><span class="logo">W</span><span>WebForge</span><span class="version-badge" id="versionBadge">v13</span></div><div class="history"><button id="undoBtn">↶</button><button id="redoBtn">↷</button></div><div class="project-name">Untitled Project</div><div class="actions"><button id="architectureBtn">Architecture</button><button id="componentsBtn">Components</button><button id="previewBtn">Preview</button><button id="generateBtn" class="primary">Generate Code</button><button id="exportBtn">Export</button></div></header>
 <div class="app-tabs"><button class="tab active">Visual</button><button class="tab">Structure</button><button class="tab">Code</button></div>
 <main class="workspace">
 <aside class="panel left-panel">
 <div class="panel-title">Pages</div><div class="page-actions"><button id="addPage">＋ Page</button></div><div id="pages" class="pages"></div>
 <div class="panel-title tree-title">Elements</div><div class="elements"><button class="element" draggable="true" data-type="section">▣ Section</button><button class="element" draggable="true" data-type="heading">T Heading</button><button class="element" draggable="true" data-type="text">¶ Text</button><button class="element" draggable="true" data-type="button">▭ Button</button><button class="element" draggable="true" data-type="image">▧ Image</button></div>
+<div class="component-library" id="componentLibrary"></div>
 <div class="panel-title tree-title">Layers</div><div id="layerTree" class="tree"></div><div class="panel-title tree-title">Project Files</div><div id="fileTree" class="file-tree"></div>
 </aside>
 <section class="canvas-wrap"><div class="canvas-toolbar"><div class="device-switch"><button data-device="desktop" class="active">Desktop</button><button data-device="tablet">Tablet</button><button data-device="mobile">Mobile</button></div><span id="selectionInfo">Nothing selected</span><span id="viewportInfo">1200px</span></div><div id="canvas" class="canvas"><div class="drop-hint">Drag an element here to start building</div></div></section>
@@ -18,18 +19,14 @@
 import { WEBFORGE_VERSION_LABEL } from './src/version.js';
 import { generateProjectDownload } from './src/ui/projectGenerator.js';
 import { createArchitectureView } from './src/ui/architectureView.js';
-const versionBadge=document.querySelector('#versionBadge');
-if(versionBadge)versionBadge.textContent=WEBFORGE_VERSION_LABEL;
+import { mountComponentLibrary } from './src/ui/componentBridge.js';
+const versionBadge=document.querySelector('#versionBadge'); if(versionBadge)versionBadge.textContent=WEBFORGE_VERSION_LABEL;
 document.querySelector('#generateBtn')?.addEventListener('click', generateProjectDownload);
 document.querySelector('#componentsBtn')?.addEventListener('click',()=>window.open('./src/ui/components.html','_blank'));
-let architectureView=null;
-const openArchitecture=()=>{if(!window.webforge?.getGraph)return;architectureView?.remove();architectureView=createArchitectureView(()=>window.webforge.getGraph());architectureView.addEventListener('architecture:close',()=>{architectureView?.remove();architectureView=null});document.body.appendChild(architectureView)};
+let architectureView=null; const openArchitecture=()=>{if(!window.webforge?.getGraph)return;architectureView?.remove();architectureView=createArchitectureView(()=>window.webforge.getGraph());architectureView.addEventListener('architecture:close',()=>{architectureView?.remove();architectureView=null});document.body.appendChild(architectureView)};
 document.querySelector('#architectureBtn')?.addEventListener('click',openArchitecture);
+const mount=()=>mountComponentLibrary(document.querySelector('#componentLibrary'),instance=>{window.dispatchEvent(new CustomEvent('webforge:component-selected',{detail:instance})); const canvas=document.querySelector('#canvas'); if(canvas){const el=document.createElement('div');el.className='forge-node component-instance';el.dataset.componentId=instance.componentId;el.textContent=`◇ ${instance.componentId}`;el.style.padding='18px';el.style.margin='18px';el.style.border='1px solid #7c5cff';canvas.appendChild(el);}}); if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
 window.addEventListener('webforge:graphchange',()=>architectureView?.refresh?.());
-window.addEventListener('webforge:generated', event => {
-  const files=Object.keys(event.detail.files||{}).length;
-  const button=document.querySelector('#generateBtn');
-  if(button){button.textContent=`Generated ${files} files ✓`;setTimeout(()=>button.textContent='Generate Code',1800);}
-});
+window.addEventListener('webforge:generated', event => {const files=Object.keys(event.detail.files||{}).length;const button=document.querySelector('#generateBtn');if(button){button.textContent=`Generated ${files} files ✓`;setTimeout(()=>button.textContent='Generate Code',1800);}});
 </script>
 </body></html>
