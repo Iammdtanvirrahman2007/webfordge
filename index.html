@@ -15,8 +15,11 @@
 </main>
 <script type="module" src="./src/ui/app.js"></script>
 <script type="module">
+import { WEBFORGE_VERSION_LABEL } from './src/version.js';
 import { generateProjectDownload } from './src/ui/projectGenerator.js';
 import { createArchitectureView } from './src/ui/architectureView.js';
+const versionBadge=document.querySelector('#versionBadge');
+if(versionBadge)versionBadge.textContent=WEBFORGE_VERSION_LABEL;
 document.querySelector('#generateBtn')?.addEventListener('click', generateProjectDownload);
 document.querySelector('#componentsBtn')?.addEventListener('click',()=>window.open('./src/ui/components.html','_blank'));
 let architectureView=null;
