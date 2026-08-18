@@ -1,4 +1,5 @@
 import { createAssetRegistry, addAsset, listAssets, removeAsset } from '../core/assetManager.js';
+import './projectPersistence.js';
 
 const STORAGE_KEY='webforge-assets-v1';
 const load=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'')||createAssetRegistry()}catch{return createAssetRegistry()}};
